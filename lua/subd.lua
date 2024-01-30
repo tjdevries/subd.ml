@@ -13,12 +13,13 @@ local socket = Websocket:new({
 
 socket:add_on_message(vim.schedule_wrap(function(frame)
   local str = frame.payload
-  print("RECV: " .. vim.inspect(vim.json.decode(str)))
+  local ok, value = pcall(vim.json.decode, str)
+  print("RECV: " .. vim.inspect({ ok = ok, value = value, str = str, }))
 end))
 
 socket:add_on_connect(vim.schedule_wrap(function()
   print("CONNECTED")
-  socket:send_text(vim.json.encode { event = "Hello", hello = true })
+  socket:send_text(vim.json.encode {})
 end))
 
 socket:connect()

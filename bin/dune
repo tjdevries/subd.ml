@@ -1,13 +1,6 @@
 (executable
- (public_name subd)
+ (public_name main)
  (name main)
- (modules main)
- (libraries subd eio piaf eio_main logs logs.fmt fmt.tty))
-
-(executable
- (public_name subd-riot)
- (name sriot)
- (modules sriot)
  (preprocess
   (pps bytestring.ppx))
  (libraries riot subd trail nomad))
