@@ -1,5 +1,5 @@
 (library
  (name subd)
- (libraries yojson eio piaf eio_main)
+ (libraries yojson eio piaf eio_main riot blink)
  (preprocess
   (pps ppx_yojson_conv)))

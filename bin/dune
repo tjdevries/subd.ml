@@ -1,6 +1,15 @@
 (executable
  (public_name main)
  (name main)
+ (modules main)
  (preprocess
   (pps bytestring.ppx))
- (libraries riot subd trail nomad))
+ (libraries riot subd trail nomad blink))
+
+(executable
+ (public_name subd-twitch)
+ (name subd_twitch)
+ (modules subd_twitch)
+ (preprocess
+  (pps bytestring.ppx))
+ (libraries riot subd trail nomad blink))

@@ -64,3 +64,45 @@ module Identify = OpCode (struct
 
     type data = IdentifyData.t [@@deriving yojson]
   end)
+
+type requests =
+  | SetCurrentProgramScene of { sceneName : string }
+  | SetSceneItemEnabled of
+      { sceneName : string
+      ; sceneItemId : int
+      ; sceneItemEnabled : bool
+      }
+  | GetSceneItemList of { sceneName : string }
+[@@deriving yojson]
+
+module RequestData = struct
+  type t =
+    { request_type : string
+    ; request_id : string
+    ; request_data : Yojson.Safe.t
+    }
+
+  let t_of_request request_data : t =
+    match yojson_of_requests request_data with
+    | `List [ `String request_type; request_data ] ->
+      { request_id = "i-dont-care"; request_type; request_data }
+    | _ -> assert false
+  ;;
+
+  let yojson_of_t t : Yojson.Safe.t =
+    `Assoc
+      [ "requestId", `String "testing-12345"
+      ; "requestType", `String t.request_type
+      ; "requestData", t.request_data
+      ]
+  ;;
+
+  (* We hopefully never have to decode this, so i'm going to skip *)
+  let t_of_yojson _ = assert false
+end
+
+module Request = OpCode (struct
+    let op = 6
+
+    type data = RequestData.t [@@deriving yojson]
+  end)

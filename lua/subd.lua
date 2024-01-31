@@ -19,7 +19,7 @@ end))
 
 socket:add_on_connect(vim.schedule_wrap(function()
   print("CONNECTED")
-  socket:send_text(vim.json.encode {})
+  -- socket:send_text(vim.json.encode {})
 end))
 
 socket:connect()
@@ -41,11 +41,24 @@ local group = vim.api.nvim_create_augroup("nvim-subd", { clear = true })
 vim.api.nvim_create_user_command("SetScene", function(args)
   if socket.client then
     socket:send_text(vim.json.encode {
-      event = "SetScene",
-      scene = args.args
+      "SetCurrentProgramScene",
+      { sceneName = args.args }
     })
   end
 end, { nargs = 1 })
+
+vim.api.nvim_create_user_command("SetSceneItemEnabled", function(args)
+  if socket.client then
+    socket:send_text(vim.json.encode {
+      "SetSceneItemEnabled",
+      {
+        sceneName = "Primary Stream - Small",
+        sceneItemId = 2,
+        sceneItemEnabled = args.bang,
+      }
+    })
+  end
+end, { bang = true })
 
 vim.api.nvim_create_user_command("WebEcho", function(args)
   if socket.client then
