@@ -1,5 +1,5 @@
 (library
  (name subd)
- (libraries yojson eio piaf eio_main riot blink)
+ (libraries yojson eio piaf eio_main riot blink dotenv)
  (preprocess
-  (pps ppx_yojson_conv)))
+  (pps ppx_yojson_conv ppx_deriving.show)))

@@ -12,4 +12,4 @@
  (modules subd_twitch)
  (preprocess
   (pps bytestring.ppx))
- (libraries riot subd trail nomad blink))
+ (libraries riot subd trail nomad blink dotenv))

@@ -1,0 +1,9 @@
+[submodule "vendor/blink"]
+	path = vendor/blink
+	url = https://github.com/leostera/blink
+[submodule "vendor/trail"]
+	path = vendor/trail
+	url = https://github.com/leostera/trail
+[submodule "vendor/nomad"]
+	path = vendor/nomad
+	url = https://github.com/leostera/nomad
