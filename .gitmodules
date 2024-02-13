@@ -7,3 +7,6 @@
 [submodule "vendor/nomad"]
 	path = vendor/nomad
 	url = https://github.com/leostera/nomad
+[submodule "vendor/serde"]
+	path = vendor/serde
+	url = https://github.com/leostera/serde.ml

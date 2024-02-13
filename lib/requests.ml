@@ -8,7 +8,7 @@ let ( let* ) = Result.bind
 
 type request_result =
   { status : Http.Status.t [@printer Http.Status.pp]
-  ; headers : Http.Header.t [@printer fun fmt _ -> fprintf fmt "<headers>"]
+  ; headers : Http.Header.t [@printer Http.Header.pp_hum]
   ; body : string
   }
 [@@deriving show]
@@ -27,7 +27,7 @@ let stream_until_done conn =
       let* conn, resp = Blink.stream conn in
       aux conn resp
     | `Status status :: rest ->
-      debug (fun f -> f "Status: %a@." Http.Status.pp status);
+      info (fun f -> f "Status: %a@." Http.Status.pp status);
       status_ref := Some status;
       aux conn rest
     | `Headers headers :: rest ->

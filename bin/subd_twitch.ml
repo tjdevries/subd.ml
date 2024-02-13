@@ -1,38 +1,29 @@
 open Riot
 
-[@@@warning "-8"]
+open Logger.Make (struct
+    let namespace = [ "subd" ]
+  end)
+
+module Broadcaster = struct
+  let start () = Subd.ChannelManager.start_link ()
+end
+
+module TwitchApp = struct
+  let start () =
+    let client_id = Sys.getenv "TWITCH_CLIENT_ID" in
+    let token = Sys.getenv "TWITCH_OAUTH_TOKEN" in
+    Logger.set_log_level (Some Info);
+    Ok
+      (spawn (fun () ->
+         warn (fun f -> f "Beginning twitch 2...");
+         let pids = Subd.Twitch.connect ~client_id ~token () in
+         wait_pids pids))
+  ;;
+end
 
 let () =
   Dotenv.export () |> ignore;
-  let client_id = Sys.getenv "TWITCH_CLIENT_ID" in
-  let token = Sys.getenv "TWITCH_OAUTH_TOKEN" in
-  Riot.run
-  @@ fun () ->
-  Logger.set_log_level (Some Info);
-  let (Ok _) = Logger.start () in
-  let twitch =
-    spawn (fun () ->
-      let session = Subd.Twitch.connect ~client_id ~token () in
-      match session with
-      | Ok session -> Logger.info (fun f -> f "Connected to Twitch: %s" session)
-      | Error `Connection_failed -> Fmt.failwith "Connection Failed"
-      | Error `Closed -> Fmt.failwith "Closed"
-      | Error `Connection_closed -> Fmt.failwith "Connection Closed"
-      | Error `Eof -> Fmt.failwith "Eof"
-      | Error `Excess_body_read -> Fmt.failwith "Excess Body Read"
-      (* | Error `Exn of exn *)
-      (* | Error `Invalid_uri of Uri.t *)
-      (* | Error `Msg of string *)
-      | Error `No_info -> Fmt.failwith "No info"
-      | Error `Noop -> Fmt.failwith "Noop"
-      | Error `Process_down -> Fmt.failwith "Process Down"
-      | Error `Response_parsing_error -> Fmt.failwith "`Response_parsing_error"
-      | Error `Timeout -> Fmt.failwith "Connection Failed"
-      (* | Error `Tls_error of exn *)
-      (* | Error `Unix_error of Unix.error *)
-      (* | Error `Unknown_opcode of int *)
-      | Error `Would_block -> Fmt.failwith "Would Block"
-      | _ -> Fmt.failwith "Unknown error")
-  in
-  wait_pids [ twitch ]
+  Riot.start
+    ~apps:[ (module Logger); (module Broadcaster); (module TwitchApp) ]
+    ()
 ;;

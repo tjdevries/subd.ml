@@ -1,2 +1,3 @@
 (test
- (name subd))
+ (name twitch_message_serde_test)
+ (libraries alcotest subd))
