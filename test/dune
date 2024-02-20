@@ -1,3 +1,5 @@
 (test
+ (package subd)
  (name twitch_message_serde_test)
+ (modules twitch_message_serde_test)
  (libraries alcotest subd))

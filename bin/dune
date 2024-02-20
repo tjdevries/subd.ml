@@ -1,4 +1,5 @@
 (executable
+ (package subd)
  (public_name main)
  (name main)
  (modules main)
@@ -7,9 +8,26 @@
  (libraries riot subd trail nomad blink))
 
 (executable
+ (package subd)
  (public_name subd-twitch)
  (name subd_twitch)
  (modules subd_twitch)
  (preprocess
   (pps bytestring.ppx))
  (libraries riot subd trail nomad blink dotenv))
+
+(executable
+ (package twitch_hackery)
+ (public_name do_the_hackery)
+ (name do_the_hackery)
+ (modules do_the_hackery)
+ (libraries twitch_hackery lambdasoup base fmt))
+
+(executable
+ (package frontend)
+ (public_name overlay)
+ (name overlay)
+ (modules overlay)
+ (libraries trail riot nomad frontend_assets)
+ (preprocess
+  (pps bytestring.ppx serde_derive)))

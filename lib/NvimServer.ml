@@ -1,3 +1,4 @@
+open Riot
 open Piaf
 
 let get_event str =
@@ -42,3 +43,43 @@ let make port env sw wsd =
   let _command = Server.Command.start ~sw env server in
   ()
 ;;
+
+module NeovimListener = struct
+  include Trail.Sock.Default
+
+  type args = unit
+  type state = int
+
+  let init _args = `ok 0
+
+  let handle_frame frame _conn state =
+    Logger.info (fun f -> f "handling frame: %a" Trail.Frame.pp frame);
+    match frame with
+    | Text { fin; payload; compressed } ->
+      let json = Yojson.Safe.from_string payload in
+      let request = OpCodes.requests_of_yojson json in
+      ChannelManager.broadcast (OpCodes.RequestOBS request) ~channel:"obs";
+      `push ([ Trail.Frame.Text { fin; payload = "[true]"; compressed } ], state)
+    | _ -> `push ([ frame ], state)
+  ;;
+end
+
+let trail =
+  let open Trail in
+  let open Router in
+  [ use (module Logger) Logger.(args ~level:Debug ())
+  ; router [ socket "/ws" (module NeovimListener) () ]
+  ]
+;;
+
+let ( let* ) = Result.bind
+
+module App = struct
+  let start () =
+    let port = 8080 in
+    let handler = Nomad.trail trail in
+    let* pid = Nomad.start_link ~port ~handler () in
+    Logger.info (fun f -> f "Listening on 0.0.0.0:%d" port);
+    Ok pid
+  ;;
+end

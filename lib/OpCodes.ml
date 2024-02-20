@@ -106,3 +106,6 @@ module Request = OpCode (struct
 
     type data = RequestData.t [@@deriving yojson]
   end)
+
+(* type Message.t += HelloWorld of string *)
+type Riot.Message.t += RequestOBS of requests

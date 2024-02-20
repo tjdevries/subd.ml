@@ -1,5 +1,17 @@
 (library
  (name subd)
- (libraries yojson eio piaf eio_main riot blink dotenv serde serde_json)
+ (libraries
+  yojson
+  nomad
+  trail
+  eio
+  piaf
+  eio_main
+  riot
+  blink
+  dotenv
+  serde
+  serde_json
+  serde_derive)
  (preprocess
-  (pps ppx_yojson_conv ppx_deriving.show)))
+  (pps ppx_yojson_conv ppx_deriving.show serde_derive)))

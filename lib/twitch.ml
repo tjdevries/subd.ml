@@ -1,5 +1,7 @@
 open Riot
 
+type Message.t += GiftedSubscription of string
+
 module Logger = Logger.Make (struct
     let namespace = [ "subd"; "twitch" ]
   end)
@@ -15,7 +17,10 @@ module Twitch = struct
 
   let make_headers ~client_id ~token ?(headers = []) () =
     let headers =
-      [ "Client-Id", client_id; "Authorization", Fmt.str "Bearer %s" token ]
+      [ "Client-Id", client_id
+      ; "Authorization", Fmt.str "Bearer %s" token
+      ; "Content-Type", "application/json"
+      ]
       @ headers
     in
     Http.Header.of_list headers
@@ -33,10 +38,6 @@ module Twitch = struct
 end
 
 let show_subscriptions ~client_id ~token () =
-  Fmt.pr "SHOWING SUBSCRIPTIONS@.";
-  (* curl -X GET 'https://api.twitch.tv/helix/eventsub/subscriptions' \ *)
-  (* -H 'Authorization: Bearer 2gbdx6oar67tqtcmt49t3wpcgycthx' \ *)
-  (* -H 'Client-Id: wbmytr93xzw8zbg0p1izqyzzc5mbiz' *)
   let* conn = Twitch.get_conn () in
   let headers = Twitch.make_headers ~client_id ~token () in
   Twitch.make_request
@@ -47,6 +48,21 @@ let show_subscriptions ~client_id ~token () =
     ()
 ;;
 
+let post_subscription body ~client_id ~token () =
+  let* conn = Twitch.get_conn () in
+  let headers = Twitch.make_headers ~client_id ~token () in
+  let* reply =
+    Twitch.make_request
+      conn
+      ~meth:`POST
+      ~headers
+      ~path:"/helix/eventsub/subscriptions"
+      ~body
+      ()
+  in
+  Ok reply
+;;
+
 let subscribe_to_channel_updates
   ~client_id
   ~token
@@ -54,7 +70,6 @@ let subscribe_to_channel_updates
   ~session_id
   ()
   =
-  let* conn = Twitch.get_conn () in
   let body =
     Fmt.str
       {|
@@ -72,18 +87,57 @@ let subscribe_to_channel_updates
       broadcaster_id
       session_id
   in
-  Fmt.pr "%s@." body;
-  let headers = Twitch.make_headers ~client_id ~token () in
-  let* reply =
-    Twitch.make_request
-      conn
-      ~meth:`POST
-      ~headers
-      ~path:"/helix/eventsub/subscriptions"
-      ~body
-      ()
+  post_subscription body ~client_id ~token ()
+;;
+
+let subscribe_to_channel_chat ~client_id ~token ~broadcaster_id ~session_id () =
+  let body =
+    Fmt.str
+      {|
+  {
+    "type": "channel.chat.message",
+    "version": 1,
+    "condition": {
+      "broadcaster_user_id": "%s",
+      "user_id": "%s"
+    },
+    "transport": {
+      "method": "websocket",
+      "session_id": "%s"
+    }
+  } |}
+      broadcaster_id
+      broadcaster_id
+      session_id
   in
-  Ok reply
+  post_subscription body ~client_id ~token ()
+;;
+
+let subscribe_to_channel_subscription_gift
+  ~client_id
+  ~token
+  ~broadcaster_id
+  ~session_id
+  ()
+  =
+  let body =
+    Fmt.str
+      {|
+  {
+    "type": "channel.subscription.gift",
+    "version": "1",
+    "condition": {
+        "broadcaster_user_id": "%s"
+    },
+    "transport": {
+      "method": "websocket",
+      "session_id": "%s"
+    }
+  } |}
+      broadcaster_id
+      session_id
+  in
+  post_subscription body ~client_id ~token ()
 ;;
 
 let twitch_eventsub_url = "https://eventsub.wss.twitch.tv/ws"
@@ -122,8 +176,14 @@ let websocket_handler () =
   loop sock
 ;;
 
+let handle_keepalive () =
+  info (fun f -> f "=> handling keepalive");
+  (* TODO: At some point we should try and reconnect if we don't get one of these *)
+  Ok ()
+;;
+
 let handle_session_welcome
-  (session : TwitchMessages.twitch_type_session)
+  (session : TwitchMessages.session)
   session_id
   ~conn
   ~client_id
@@ -131,9 +191,8 @@ let handle_session_welcome
   =
   info (fun f -> f "=> setting session_id: %s" session.id);
   session_id := Some session.id;
-  let* subscriptions = show_subscriptions ~client_id ~token () in
-  Fmt.pr "-> PRE SUBSCRIPTIONS: %a@." Requests.pp_request_result subscriptions;
-  let* reply =
+  let* _ = show_subscriptions ~client_id ~token () in
+  let* _ =
     subscribe_to_channel_updates
       ~client_id
       ~token
@@ -141,17 +200,29 @@ let handle_session_welcome
       ~broadcaster_id
       ()
   in
-  Fmt.pr "<- SUBSCRIBED: %a@." Requests.pp_request_result reply;
+  let* reply =
+    subscribe_to_channel_chat
+      ~client_id
+      ~token
+      ~session_id:session.id
+      ~broadcaster_id
+      ()
+  in
+  let* _ =
+    subscribe_to_channel_subscription_gift
+      ~client_id
+      ~token
+      ~session_id:session.id
+      ~broadcaster_id
+      ()
+  in
   match reply.status with
   | `Bad_request | `Code 400 ->
-    Fmt.pr "Failed to subscribe to channel.update@.";
+    error (fun f -> f "Failed to subscribe to channel.update@.");
     Ok ()
   | _ ->
-    let* subscriptions = show_subscriptions ~client_id ~token () in
-    Fmt.pr
-      "-> POST SUBSCRIPTIONS: %a@."
-      Requests.pp_request_result
-      subscriptions;
+    sleep 1.0;
+    let* _ = show_subscriptions ~client_id ~token () in
     let _ = conn in
     Ok ()
 ;;
@@ -167,21 +238,33 @@ let twitch_handler ~client_id ~token () =
       loop ()
     | Ws (_, Trail.Frame.Text { payload; _ }) ->
       let open TwitchMessages in
+      trace (fun f -> f "Parsing twitch message...: %s@." payload);
       let message = get_twitch_message payload in
+      info (fun f -> f "Handling twitch message...");
       let* () =
         match message with
         | Ok (SessionWelcome session) ->
+          info (fun f -> f "Session welcome: %s" session.session.id);
           handle_session_welcome
             session.session
             session_id
             ~conn
             ~client_id
             ~token
-        | Ok _ ->
-          info (fun f -> f "=> handled: %s" payload);
+        | Ok KeepAlive -> handle_keepalive ()
+        | Ok (ChannelUpdate update) ->
+          info (fun f -> f "=> Got an update: %s" update.event.title);
           Ok ()
-        | Error _ ->
-          info (fun f -> f "=> unhandled: %s" payload);
+        | Ok (ChannelSubscriptionGift gift) ->
+          info (fun f -> f "=> Got a gifted sub from: %s" gift.event.user_name);
+          (* TODO: What should the channels be?... it seems weird to send
+             to OBS directly? *)
+          ChannelManager.broadcast
+            (GiftedSubscription gift.event.user_name)
+            ~channel:"obs";
+          Ok ()
+        | Error err ->
+          info (fun f -> f "=> unhandled: %s \n\n%a" payload Serde.pp_err err);
           Ok ()
       in
       loop ()

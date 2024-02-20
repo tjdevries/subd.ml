@@ -1,0 +1,53 @@
+; (library
+;  (package frontend)
+;  (name frontend_js)
+;  (modes melange)
+;  (libraries melange.dom)
+;  (preprocess
+;   (pps melange.ppx)))
+;
+; (alias
+;  (name all)
+;  (deps
+;   (alias_rec bundle)))
+;
+; (melange.emit
+;  (target output)
+;  (alias frontend)
+;  (modules)
+;  (libraries frontend))
+
+(dirs :standard \ node_modules)
+
+(library
+ (package frontend)
+ (name frontend_js)
+ (modes melange)
+ (libraries melange.dom)
+ (preprocess
+  (pps melange.ppx)))
+
+(alias
+ (name all)
+ (deps
+  (alias_rec bundle)))
+
+(rule
+ (alias bundle)
+ (targets
+  (dir dist))
+ (deps
+  (alias_rec frontend_js))
+ (action
+  (system
+   "../../../frontend_js/node_modules/.bin/esbuild output/frontend_js/main.mjs --bundle --outdir=dist"))
+ (mode
+  (promote (until-clean))))
+
+(melange.emit
+ (target output)
+ (alias frontend_js)
+ (modules)
+ (libraries frontend_js)
+ (module_systems
+  (es6 mjs)))

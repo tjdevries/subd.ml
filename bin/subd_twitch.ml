@@ -24,6 +24,12 @@ end
 let () =
   Dotenv.export () |> ignore;
   Riot.start
-    ~apps:[ (module Logger); (module Broadcaster); (module TwitchApp) ]
+    ~apps:
+      [ (module Logger)
+      ; (module Broadcaster)
+      ; (module TwitchApp)
+      ; (module Subd.OBS.App)
+      ; (module Subd.NvimServer.App)
+      ]
     ()
 ;;

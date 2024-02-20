@@ -1,0 +1,8 @@
+(data_only_dirs data)
+
+(library
+ (inline_tests)
+ (name twitch_hackery)
+ (libraries base lambdasoup fmt ppx_expect)
+ (preprocess
+  (pps ppx_expect)))
