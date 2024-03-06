@@ -40,7 +40,7 @@
   (alias_rec frontend_js))
  (action
   (system
-   "../../../frontend_js/node_modules/.bin/esbuild output/frontend_js/main.mjs --bundle --outdir=dist"))
+   "esbuild output/frontend/frontend_js.mjs --bundle --outdir=dist"))
  (mode
   (promote (until-clean))))
 

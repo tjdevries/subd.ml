@@ -66,14 +66,32 @@ let trail =
   ; use
       (module Memory)
       Memory.(config ~prefix:"/static" [ (module Frontend_assets) ])
-  ; router []
+  ; router
+      [ get "/" (fun conn ->
+          let str =
+            Bytestring.of_string
+              {|
+<html>
+  <head>
+    <script src="/static/frontend_js.js">
+    </script>
+    <style>
+        * {
+            background-color: black
+        }
+    </style>
+  </head>
+</html> |}
+          in
+          Conn.send_response `OK str conn)
+      ]
   ]
 ;;
 
 module App = struct
   let start () =
     let handler = Nomad.trail trail in
-    Nomad.start_link ~port:8080 ~handler ()
+    Nomad.start_link ~port:8181 ~handler ()
   ;;
 end
 

@@ -9,12 +9,12 @@
 
 (rule
  (target ./frontend_assets.ml)
- (deps ./frontend_js/dist/main.js)
+ (deps ./frontend/dist/frontend_js.js)
  (mode promote)
  (action
   (run
    ocaml-crunch
-   ./frontend_js/dist
+   ./frontend/dist
    --mode=plain
    --silent
    --output=%{target})))
